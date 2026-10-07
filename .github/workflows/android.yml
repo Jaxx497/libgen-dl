@@ -9,7 +9,7 @@ on:
         default: ""
 
 permissions:
-  contents: read
+  contents: write # manual runs publish a prerelease (below)
 
 jobs:
   apk:
@@ -60,3 +60,15 @@ jobs:
         with:
           name: LibgenDL.apk
           path: LibgenDL.apk
+      # Manual runs publish a rolling prerelease so Obtainium (with "include prereleases") can track it.
+      # github.workflow is the caller's name, so the release workflow's own APK build skips this.
+      - name: Publish dev prerelease
+        if: github.workflow == 'Android APK'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag="dev-${{ github.run_number }}"
+          gh release list --json tagName -q '.[].tagName | select(startswith("dev-"))' \
+            | xargs -r -n1 gh release delete --cleanup-tag --yes
+          gh release create "$tag" LibgenDL.apk --prerelease --target "$GITHUB_SHA" \
+            --title "Dev build ${{ github.run_number }}" --notes "Unreleased build of ${GITHUB_SHA::7}."
