@@ -35,7 +35,7 @@ jobs:
       # Our icons and splash replace Capacitor's defaults (made by scripts/make-icons.py).
       - run: cp -r resources/android-res/. android/app/src/main/res/
       # Every build is signed with the one release key, so each installs over the last.
-      # The keystore is kept outside the repo; see "Signing" in the README.
+      # The keystore is kept outside the repo.
       - name: Build signed APK
         working-directory: android
         env:
@@ -43,7 +43,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
           if [ -z "$KEYSTORE" ]; then
-            echo "::error::ANDROID_KEYSTORE secret is missing (see Signing in the README)"
+            echo "::error::ANDROID_KEYSTORE secret is missing"
             exit 1
           fi
           echo "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.jks"
