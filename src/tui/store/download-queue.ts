@@ -1,8 +1,7 @@
 import type { GetState, SetState } from "./index";
 import { Entry } from "../../api/models/entry";
 import { DownloadStatus } from "../../download-status";
-import { attempt } from "../../utilities";
-import { getDocument } from "../../api/data/document";
+import { findDownloadUrl, md5Of } from "../../api/data/download-url";
 import { saveFromUrl } from "../../api/data/download";
 import { DOWNLOAD_CONNECT_TIMEOUT_MS } from "../../settings";
 
@@ -113,33 +112,20 @@ export const createDownloadQueueStateSlice = (set: SetState, get: GetState) => (
       const controller = new AbortController();
       activeDownload = { id: entry.id, controller };
       let timedOut = false;
-      const connectTimeout = setTimeout(() => {
-        timedOut = true;
-        controller.abort();
-      }, DOWNLOAD_CONNECT_TIMEOUT_MS);
+      let connectTimeout: ReturnType<typeof setTimeout> | undefined;
       try {
         store.updateCurrentDownloadProgress(entry.id, {
           status: DownloadStatus.CONNECTING_TO_LIBGEN,
         });
 
-        // read the adapter per download: the mirror may have been switched meanwhile
-        const detailPageUrl = get().mirrorAdapter?.getPageURL(entry.mirror);
-        if (!detailPageUrl) {
-          throw new Error(`Couldn't get the detail page URL for "${entry.title}"`);
-        }
+        // read per download: the mirror may have been switched meanwhile
+        const downloadUrl = await findDownloadUrl(md5Of(entry.mirror), get(), controller.signal);
 
-        const mirrorPageResult = await attempt((signal) => getDocument(detailPageUrl, signal), {
-          signal: controller.signal,
-        });
-        if (!mirrorPageResult) {
-          throw new Error(`Couldn't fetch the mirror page for "${entry.title}"`);
-        }
-
-        const downloadUrl = get().mirrorAdapter?.getMainDownloadURLFromDocument(mirrorPageResult);
-        if (!downloadUrl) {
-          throw new Error(`Couldn't find the download url for "${entry.title}"`);
-        }
-
+        // only the file connection is timed: the lookup tries each mirror under its own timeout
+        connectTimeout = setTimeout(() => {
+          timedOut = true;
+          controller.abort();
+        }, DOWNLOAD_CONNECT_TIMEOUT_MS);
         store.updateCurrentDownloadProgress(entry.id, {
           status: DownloadStatus.DOWNLOADING,
         });

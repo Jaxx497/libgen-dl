@@ -27,6 +27,7 @@ export const initialConfigState: Omit<
 > = {
   mirrorAdapter: undefined,
   mirrors: [],
+  downloadMirrors: [],
   mirror: undefined,
   userConfig: defaultConfig(),
   filter: [],
@@ -83,6 +84,7 @@ export const createConfigStateSlice = (set: SetState, get: GetState) => ({
 
     set({
       mirrors,
+      downloadMirrors: config?.downloadMirrors ?? [],
       mirror,
       mirrorAdapter,
     });

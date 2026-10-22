@@ -2,7 +2,7 @@ import type { GetState, SetState } from "./index";
 import { DownloadStatus } from "../../download-status";
 import { attempt, delay } from "../../utilities";
 import { IDownloadProgress } from "./download-queue";
-import { getDocument } from "../../api/data/document";
+import { findDownloadUrl } from "../../api/data/download-url";
 import { downloadFile } from "../../api/data/download";
 import { fetchLibgen } from "../../api/data/request";
 
@@ -84,25 +84,13 @@ export const createBulkDownloadQueueStateSlice = (set: SetState, get: GetState) 
     operateBulkDownloadQueue: async () => {
       const bulkDownloadQueue = get().bulkDownloadQueue;
       for (const [index, item] of bulkDownloadQueue.entries()) {
-        const detailPageUrl = get().mirrorAdapter?.getDetailPageURL(item.md5);
-        if (!detailPageUrl) {
-          get().setWarningMessage(`Couldn't get the detail page URL for ${item.md5}`);
-          get().onBulkQueueItemFail(index);
-          continue;
-        }
-
         get().onBulkQueueItemProcessing(index);
 
-        const detailPageResult = await attempt((signal) => getDocument(detailPageUrl, signal));
-        if (!detailPageResult) {
-          get().setWarningMessage(`Couldn't fetch the detail page for ${item.md5}`);
-          get().onBulkQueueItemFail(index);
-          continue;
-        }
-
-        const downloadUrl = get().mirrorAdapter?.getMainDownloadURLFromDocument(detailPageResult);
-        if (!downloadUrl) {
-          get().setWarningMessage(`Couldn't find the download url for ${item.md5}`);
+        let downloadUrl: string;
+        try {
+          downloadUrl = await findDownloadUrl(item.md5, get(), new AbortController().signal);
+        } catch (error) {
+          get().setWarningMessage((error as Error).message);
           get().onBulkQueueItemFail(index);
           continue;
         }

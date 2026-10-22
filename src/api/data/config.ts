@@ -3,7 +3,7 @@ import { attempt } from "../../utilities";
 import type { AttemptOptions } from "../../utilities";
 import { fetchLibgen } from "./request";
 
-export type MirrorType = "libgen-plus";
+export type MirrorType = "libgen-plus" | "libgen-spa";
 
 export interface Mirror {
   src: string;
@@ -12,6 +12,8 @@ export interface Mirror {
 
 export interface Config {
   mirrors: Mirror[];
+  // SPA mirrors that only serve downloads (tried after every libgen mirror)
+  downloadMirrors: Mirror[];
 }
 
 export async function fetchConfig(signal: AbortSignal): Promise<Config> {
@@ -22,6 +24,9 @@ export async function fetchConfig(signal: AbortSignal): Promise<Config> {
 
     return {
       mirrors: (config["mirrors"] as Mirror[]) || [],
+      downloadMirrors: ((config["download_mirrors"] as Mirror[]) || []).filter(
+        (mirror) => mirror.type === "libgen-spa" && URL.canParse(mirror.src)
+      ),
     };
   } catch {
     throw new Error("Error occurred while fetching configuration.");

@@ -13,12 +13,17 @@ describe("configuration data", () => {
       Response.json({
         latest_version: "4.0.0",
         mirrors: [{ src: "https://mirror.example/", type: "libgen-plus" }],
+        download_mirrors: [
+          { src: "https://spa.example/", type: "libgen-spa" },
+          { src: "https://other.example/", type: "unknown" },
+        ],
       })
     );
     const signal = new AbortController().signal;
 
     await expect(fetchConfig(signal)).resolves.toEqual({
       mirrors: [{ src: "https://mirror.example/", type: "libgen-plus" }],
+      downloadMirrors: [{ src: "https://spa.example/", type: "libgen-spa" }],
     });
     expect(fetchMock).toHaveBeenCalledWith(CONFIGURATION_URL, { signal });
   });

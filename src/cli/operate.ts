@@ -1,9 +1,8 @@
 import fs from "node:fs";
-import { getDocument } from "../api/data/document";
+import { findDownloadUrl } from "../api/data/download-url";
 import renderTUI from "../tui/index";
 import { LAYOUT_KEY } from "../tui/layouts/keys";
 import { useBoundStore } from "../tui/store/index";
-import { attempt } from "../utilities";
 import { applyFlags, loadUserConfig } from "../user-config";
 import { SEARCH_MIN_CHAR } from "../settings";
 
@@ -100,12 +99,12 @@ export const operate = async (flags: Record<string, unknown>) => {
     const store = useBoundStore.getState();
 
     console.log("Finding download url...");
-    const detailPageUrl = store.mirrorAdapter?.getDetailPageURL(md5) ?? "";
-    const detailPage = await attempt((signal) => getDocument(detailPageUrl, signal));
-    const downloadUrl =
-      detailPage && store.mirrorAdapter?.getMainDownloadURLFromDocument(detailPage);
+    const downloadUrl = await findDownloadUrl(md5, store, new AbortController().signal).catch(
+      (error: Error) => {
+        console.error(error.message);
+      }
+    );
     if (!downloadUrl) {
-      console.error(`Couldn't find a download link for ${md5}`);
       process.exitCode = 1;
       return;
     }

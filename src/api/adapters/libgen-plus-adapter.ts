@@ -36,8 +36,12 @@ export class LibgenPlusAdapter {
       const language = clearText(element.children[4]?.textContent || "");
       const size = clearText(element.children[6]?.textContent || "");
       const extension = clearText(element.children[7]?.textContent || "");
-      const mirror =
-        element.children[8]?.getElementsByTagName("a")?.[0]?.getAttribute("href") || "";
+      // The cell can hold file links or other hosts before the libgen page; the page (carrying
+      // the md5) is what a download starts from.
+      const hrefs = [...(element.children[8]?.getElementsByTagName("a") ?? [])].map(
+        (anchor) => anchor.getAttribute("href") || ""
+      );
+      const mirror = hrefs.find((href) => this.isLibgenPageLink(href)) ?? hrefs[0] ?? "";
       // The file's md5 is stable across re-parses (the download state is keyed by it).
       const id = /md5=([\da-f]{32})/i.exec(mirror)?.[1] ?? mirror;
       entries.push({
@@ -55,6 +59,11 @@ export class LibgenPlusAdapter {
     }
 
     return entries;
+  }
+
+  private isLibgenPageLink(href: string): boolean {
+    const url = URL.parse(href, this.baseURL);
+    return url?.host === new URL(this.baseURL).host && Boolean(url.searchParams.get("md5"));
   }
 
   getPageURL(pathname: string): string {
