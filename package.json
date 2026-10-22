@@ -1,6 +1,6 @@
 {
   "name": "libgen-dl",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "private": true,
   "type": "module",
   "description": "libgen-dl: search and download books from LibGen in the terminal. Fork of libgen-downloader by Ömercan Balandı.",
